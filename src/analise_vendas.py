@@ -245,3 +245,100 @@ print(fat_mensal_fmt[["mes", "receita_mensal", "transacoes"]].to_string(index=Fa
 total_geral = fat_mensal["receita_mensal"].sum()
 
 print(f"\nReceita Total Geral: {fmt_moeda(total_geral)}")
+
+# ─────────────────────────────────────────────
+# 4. TICKET MÉDIO POR CLIENTE (FILIAL vs EMPRESA)
+# ─────────────────────────────────────────────
+# Objetivo:
+# - Analisar comportamento de compra em dois níveis:
+#   • cliente_filho → visão operacional (filial)
+#   • cpf_cnpj → visão consolidada (empresa)
+
+print("\n" + "=" * 60)
+print("3. TICKET MÉDIO POR CLIENTE")
+print("=" * 60)
+
+# ─────────────────────────────────────────────
+# FUNÇÕES DE FORMATAÇÃO
+# ─────────────────────────────────────────────
+def fmt_moeda(n):
+    return f"R$ {n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def fmt_int(n):
+    return f"{int(n):,}".replace(",", ".")
+
+def fmt_cnpj(n):
+    return f"{int(n)}"
+
+# ─────────────────────────────────────────────
+# 1. ANÁLISE POR FILIAL (cliente_filho)
+# ─────────────────────────────────────────────
+ticket_filial = (
+    df_fat.groupby("cliente_filho")
+    .agg(
+        receita_total=("receita", "sum"),
+        num_pedidos=("receita", "count")
+    )
+    .reset_index()
+)
+
+ticket_filial["ticket_medio"] = (
+    ticket_filial["receita_total"] / ticket_filial["num_pedidos"]
+)
+
+print("\n--- ANÁLISE POR FILIAL (cliente_filho) ---")
+
+print(f"Total de clientes (filiais): {fmt_int(ticket_filial.shape[0])}")
+print(f"Ticket médio geral: {fmt_moeda(ticket_filial['ticket_medio'].mean())}")
+print(f"Ticket mediano: {fmt_moeda(ticket_filial['ticket_medio'].median())}")
+
+top_filial = (
+    ticket_filial
+    .sort_values("receita_total", ascending=False)
+    .head(10)
+    .copy()
+)
+
+top_filial["receita_total"] = top_filial["receita_total"].apply(fmt_moeda)
+top_filial["num_pedidos"] = top_filial["num_pedidos"].apply(fmt_int)
+top_filial["ticket_medio"] = top_filial["ticket_medio"].apply(fmt_moeda)
+
+print("\nTop 10 filiais por receita:")
+print(top_filial.to_string(index=False))
+
+# ─────────────────────────────────────────────
+# 2. ANÁLISE POR EMPRESA (cpf_cnpj)
+# ─────────────────────────────────────────────
+ticket_empresa = (
+    df_fat.groupby("cpf_cnpj")
+    .agg(
+        receita_total=("receita", "sum"),
+        num_pedidos=("receita", "count")
+    )
+    .reset_index()
+)
+
+ticket_empresa["ticket_medio"] = (
+    ticket_empresa["receita_total"] / ticket_empresa["num_pedidos"]
+)
+
+print("\n--- ANÁLISE POR EMPRESA (cpf_cnpj) ---")
+
+print(f"Total de clientes (empresas): {fmt_int(ticket_empresa.shape[0])}")
+print(f"Ticket médio geral: {fmt_moeda(ticket_empresa['ticket_medio'].mean())}")
+print(f"Ticket mediano: {fmt_moeda(ticket_empresa['ticket_medio'].median())}")
+
+top_empresa = (
+    ticket_empresa
+    .sort_values("receita_total", ascending=False)
+    .head(10)
+    .copy()
+)
+
+top_empresa["cpf_cnpj"] = top_empresa["cpf_cnpj"].apply(fmt_cnpj)
+top_empresa["receita_total"] = top_empresa["receita_total"].apply(fmt_moeda)
+top_empresa["num_pedidos"] = top_empresa["num_pedidos"].apply(fmt_int)
+top_empresa["ticket_medio"] = top_empresa["ticket_medio"].apply(fmt_moeda)
+
+print("\nTop 10 empresas por receita:")
+print(top_empresa.to_string(index=False))
