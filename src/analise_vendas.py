@@ -179,3 +179,69 @@ ranking_quantidade_fmt["ticket_medio"] = ranking_quantidade.head(15)["ticket_med
 
 print("\n--- TOP 15 PRODUTOS POR QUANTIDADE ---")
 print(ranking_quantidade_fmt.to_string(index=True))
+
+# ─────────────────────────────────────────────
+# 3. FATURAMENTO MENSAL
+# ─────────────────────────────────────────────
+# Objetivo: analisar evolução da receita ao longo do tempo
+# Inclui volume de transações para contexto operacional
+
+print("\n" + "=" * 60)
+print("2. FATURAMENTO MENSAL")
+print("=" * 60)
+
+# ─────────────────────────────────────────────
+# AGREGAÇÃO
+# ─────────────────────────────────────────────
+fat_mensal = (
+    df_fat.groupby("mes_ref")
+    .agg(
+        receita_mensal=("receita", "sum"),
+        transacoes=("receita", "count")
+    )
+    .reset_index()
+    .sort_values("mes_ref")
+)
+
+# ─────────────────────────────────────────────
+# FORMATAÇÃO
+# ─────────────────────────────────────────────
+def fmt_moeda(n):
+    return f"R$ {n:,.0f}".replace(",", ".")
+
+def fmt_int(n):
+    return f"{int(n):,}".replace(",", ".")
+
+# Formato de mês amigável (Jan/2025)
+fat_mensal["mes"] = fat_mensal["mes_ref"].dt.strftime("%b/%Y")
+
+# Ajuste para PT-BR (opcional mas bonito)
+fat_mensal["mes"] = (
+    fat_mensal["mes"]
+    .str.replace("Jan", "Jan")
+    .str.replace("Feb", "Fev")
+    .str.replace("Mar", "Mar")
+    .str.replace("Apr", "Abr")
+    .str.replace("May", "Mai")
+    .str.replace("Jun", "Jun")
+    .str.replace("Jul", "Jul")
+    .str.replace("Aug", "Ago")
+    .str.replace("Sep", "Set")
+    .str.replace("Oct", "Out")
+    .str.replace("Nov", "Nov")
+    .str.replace("Dec", "Dez")
+)
+
+# Aplicar formatação
+fat_mensal_fmt = fat_mensal.copy()
+fat_mensal_fmt["receita_mensal"] = fat_mensal_fmt["receita_mensal"].apply(fmt_moeda)
+fat_mensal_fmt["transacoes"] = fat_mensal_fmt["transacoes"].apply(fmt_int)
+
+print(fat_mensal_fmt[["mes", "receita_mensal", "transacoes"]].to_string(index=False))
+
+# ─────────────────────────────────────────────
+# TOTAL GERAL
+# ─────────────────────────────────────────────
+total_geral = fat_mensal["receita_mensal"].sum()
+
+print(f"\nReceita Total Geral: {fmt_moeda(total_geral)}")
