@@ -100,3 +100,82 @@ df_fat["volume"] = df_fat["Volume_faturado"].where(
 )
 
 print(f"\nLinhas após filtro de faturamento positivo: {df_fat.shape[0]:,}\n")
+
+# ─────────────────────────────────────────────
+# 2. RANKING DE PRODUTOS MAIS VENDIDOS
+# ─────────────────────────────────────────────
+# Objetivo: analisar os produtos sob três perspectivas:
+# - Receita → impacto financeiro
+# - Quantidade → demanda operacional
+# - Ticket médio → valor agregado por unidade
+
+print("=" * 60)
+print("1. RANKING DE PRODUTOS MAIS VENDIDOS")
+print("=" * 60)
+
+# ─────────────────────────────────────────────
+# FUNÇÕES DE FORMATAÇÃO (saída amigável)
+# ─────────────────────────────────────────────
+def fmt_moeda(n):
+    return f"R$ {n:,.0f}".replace(",", ".")
+
+def fmt_qtd(n):
+    return f"{int(n):,}".replace(",", ".") + " un"
+
+def fmt_ticket(n):
+    return f"R$ {n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+# ─────────────────────────────────────────────
+# AGREGAÇÃO BASE
+# ─────────────────────────────────────────────
+ranking = (
+    df_fat.groupby(["codigo_produto", "produto"])
+    .agg(
+        receita_total=("receita", "sum"),
+        quantidade_total=("volume", "sum")
+    )
+    .reset_index()
+)
+
+# Ticket médio por produto
+ranking["ticket_medio"] = ranking["receita_total"] / ranking["quantidade_total"]
+
+print(f"Total de produtos únicos: {ranking.shape[0]:,}")
+
+# ─────────────────────────────────────────────
+# TOP PRODUTOS POR RECEITA (visão financeira)
+# ─────────────────────────────────────────────
+ranking_receita = (
+    ranking
+    .sort_values("receita_total", ascending=False)
+    .reset_index(drop=True)
+)
+
+ranking_receita.index += 1
+
+ranking_receita_fmt = ranking_receita.head(15).copy()
+ranking_receita_fmt["receita_total"] = ranking_receita_fmt["receita_total"].apply(fmt_moeda)
+ranking_receita_fmt["quantidade_total"] = ranking_receita_fmt["quantidade_total"].apply(fmt_qtd)
+ranking_receita_fmt["ticket_medio"] = ranking_receita.head(15)["ticket_medio"].apply(fmt_ticket)
+
+print("\n--- TOP 15 PRODUTOS POR RECEITA ---")
+print(ranking_receita_fmt.to_string(index=True))
+
+# ─────────────────────────────────────────────
+# TOP PRODUTOS POR QUANTIDADE (visão operacional)
+# ─────────────────────────────────────────────
+ranking_quantidade = (
+    ranking
+    .sort_values("quantidade_total", ascending=False)
+    .reset_index(drop=True)
+)
+
+ranking_quantidade.index += 1
+
+ranking_quantidade_fmt = ranking_quantidade.head(15).copy()
+ranking_quantidade_fmt["receita_total"] = ranking_quantidade_fmt["receita_total"].apply(fmt_moeda)
+ranking_quantidade_fmt["quantidade_total"] = ranking_quantidade_fmt["quantidade_total"].apply(fmt_qtd)
+ranking_quantidade_fmt["ticket_medio"] = ranking_quantidade.head(15)["ticket_medio"].apply(fmt_ticket)
+
+print("\n--- TOP 15 PRODUTOS POR QUANTIDADE ---")
+print(ranking_quantidade_fmt.to_string(index=True))
