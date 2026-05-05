@@ -342,3 +342,69 @@ top_empresa["ticket_medio"] = top_empresa["ticket_medio"].apply(fmt_moeda)
 
 print("\nTop 10 empresas por receita:")
 print(top_empresa.to_string(index=False))
+
+# ─────────────────────────────────────────────
+# 5. TOP 10 PRODUTOS POR CATEGORIA
+# ─────────────────────────────────────────────
+# Objetivo:
+# - Analisar performance de produtos por categoria
+# - Comparar comportamento entre Metais, Louças e Cerâmica
+
+print("\n" + "=" * 60)
+print("4. TOP 10 PRODUTOS POR CATEGORIA (METAIS / LOUÇAS / CERÂMICA)")
+print("=" * 60)
+
+# ─────────────────────────────────────────────
+# FUNÇÕES DE FORMATAÇÃO
+# ─────────────────────────────────────────────
+def fmt_moeda(n):
+    return f"R$ {n:,.0f}".replace(",", ".")
+
+def fmt_qtd(n):
+    return f"{int(n):,}".replace(",", ".") + " un"
+
+# ─────────────────────────────────────────────
+# MAPEAMENTO DE CATEGORIA
+# ─────────────────────────────────────────────
+categoria_map = {
+    "METAIS": "Metais",
+    "LOUÇAS": "Louças",
+    "PORTINARI": "Cerâmica",
+    "CEUSA": "Cerâmica",
+}
+
+df_fat["categoria"] = df_fat["fabrica"].map(categoria_map).fillna(df_fat["fabrica"])
+
+# ─────────────────────────────────────────────
+# AGREGAÇÃO
+# ─────────────────────────────────────────────
+top10_cat = (
+    df_fat.groupby(["categoria", "codigo_produto", "produto"])
+    .agg(
+        receita_total=("receita", "sum"),
+        volume_total=("volume", "sum")
+    )
+    .reset_index()
+)
+
+# ─────────────────────────────────────────────
+# EXIBIÇÃO FORMATADA
+# ─────────────────────────────────────────────
+for cat in ["Metais", "Louças", "Cerâmica"]:
+    sub = (
+        top10_cat[top10_cat["categoria"] == cat]
+        .sort_values("receita_total", ascending=False)
+        .head(10)
+        .reset_index(drop=True)
+        .copy()
+    )
+
+    sub.index += 1
+
+    # aplicar formatação
+    sub["receita_total"] = sub["receita_total"].apply(fmt_moeda)
+    sub["volume_total"] = sub["volume_total"].apply(fmt_qtd)
+
+    print(f"\n--- {cat} ---")
+    print(sub[["produto", "receita_total", "volume_total"]].to_string(index=True))
+ 
