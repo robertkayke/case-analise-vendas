@@ -408,3 +408,89 @@ for cat in ["Metais", "Louças", "Cerâmica"]:
     print(f"\n--- {cat} ---")
     print(sub[["produto", "receita_total", "volume_total"]].to_string(index=True))
  
+ # ─────────────────────────────────────────────
+# 6. ANÁLISES EXTRAS
+# ─────────────────────────────────────────────
+print("\n" + "=" * 60)
+print("5. ANÁLISES EXTRAS")
+print("=" * 60)
+
+# ─────────────────────────────────────────────
+# FUNÇÃO AUXILIAR
+# ─────────────────────────────────────────────
+def fmt_moeda(n):
+    return f"R$ {n:,.0f}".replace(",", ".")
+
+# ─────────────────────────────────────────────
+# 1. FATURAMENTO POR CANAL
+# ─────────────────────────────────────────────
+print("\n📊 FATURAMENTO POR CANAL")
+
+fat_canal = (
+    df_fat.groupby("canal_1")["receita"]
+    .sum()
+    .sort_values(ascending=False)
+    .reset_index()
+)
+
+fat_canal["receita"] = fat_canal["receita"].apply(fmt_moeda)
+
+print(fat_canal.to_string(index=False))
+
+# insight rápido
+top_canal = fat_canal.iloc[0]
+print(f"\n→ Canal dominante: {top_canal['canal_1']} ({top_canal['receita']})")
+
+# ─────────────────────────────────────────────
+# 2. FATURAMENTO POR EMPRESA
+# ─────────────────────────────────────────────
+print("\n🏢 FATURAMENTO POR EMPRESA")
+
+fat_empresa = (
+    df_fat.groupby("empresa")["receita"]
+    .sum()
+    .sort_values(ascending=False)
+    .reset_index()
+)
+
+fat_empresa["receita"] = fat_empresa["receita"].apply(fmt_moeda)
+
+print(fat_empresa.to_string(index=False))
+
+# insight
+top_empresa = fat_empresa.iloc[0]
+print(f"\n→ Empresa dominante: {top_empresa['empresa']} ({top_empresa['receita']})")
+
+# ─────────────────────────────────────────────
+# 3. TAXA DE DEVOLUÇÃO
+# ─────────────────────────────────────────────
+print("\n🔁 TAXA DE DEVOLUÇÃO")
+
+total_fat = df[df["status_ordem_venda"] == "FATURAMENTO"]["Receita_faturada"].sum()
+
+dev = df[df["status_ordem_venda"] == "DEVOLUÇÃO"]
+
+total_dev = abs(
+    dev["Receita_faturada"].fillna(0).sum() +
+    dev["Receita_vendida"].fillna(0).sum()
+)
+
+taxa_dev = (total_dev / total_fat * 100) if total_fat > 0 else 0
+
+print(f"Receita faturada: {fmt_moeda(total_fat)}")
+print(f"Valor devolvido:  {fmt_moeda(total_dev)}")
+print(f"Taxa de devolução: {taxa_dev:.2f}%")
+
+# ─────────────────────────────────────────────
+# 4. SAZONALIDADE
+# ─────────────────────────────────────────────
+print("\n📅 SAZONALIDADE")
+
+mes_max = fat_mensal.loc[fat_mensal["receita_mensal"].idxmax(), "mes_ref"]
+mes_min = fat_mensal.loc[fat_mensal["receita_mensal"].idxmin(), "mes_ref"]
+
+mes_max_fmt = mes_max.strftime("%b/%Y")
+mes_min_fmt = mes_min.strftime("%b/%Y")
+
+print(f"Mês de maior faturamento: {mes_max_fmt}")
+print(f"Mês de menor faturamento: {mes_min_fmt}")
